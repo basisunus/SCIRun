@@ -716,7 +716,6 @@ void ModuleWidget::createInputPorts(const SCIRun::Dataflow::Networks::ModuleInfo
       this);
     hookUpGeneralPortSignals(w);
     connect(this, SIGNAL(connectionAdded(const SCIRun::Dataflow::Networks::ConnectionDescription&)), w, SLOT(MakeTheConnection(const SCIRun::Dataflow::Networks::ConnectionDescription&)));
-    connect(w, SIGNAL(highlighted(bool)), this, SLOT(updatePortSpacing(bool)));
     ports_->addPort(w);
     ++i;
     if (dialog_)
@@ -750,7 +749,6 @@ void ModuleWidget::createOutputPorts(const SCIRun::Dataflow::Networks::ModuleInf
       closestPortFinder_,
       port->getPortDataDescriber(),
       this);
-    connect(w, SIGNAL(highlighted(bool)), this, SLOT(updatePortSpacing(bool)));
     hookUpGeneralPortSignals(w);
     ports_->addPort(w);
     ++i;
@@ -764,9 +762,11 @@ void ModuleWidget::hookUpGeneralPortSignals(PortWidget* port) const
   connect(port, SIGNAL(connectionDeleted(const SCIRun::Dataflow::Networks::ConnectionId&)),
     this, SIGNAL(connectionDeleted(const SCIRun::Dataflow::Networks::ConnectionId&)));
   connect(this, SIGNAL(cancelConnectionsInProgress()), port, SLOT(cancelConnectionsInProgress()));
+  connect(this, SIGNAL(cancelConnectionsInProgress()), port, SLOT(clearPotentialConnections()));
   connect(port, SIGNAL(connectNewModule(const SCIRun::Dataflow::Networks::PortDescriptionInterface*, const std::string&)),
     this, SLOT(connectNewModule(const SCIRun::Dataflow::Networks::PortDescriptionInterface*, const std::string&)));
   connect(port, SIGNAL(connectionNoteChanged()), this, SIGNAL(noteChanged()));
+  connect(port, SIGNAL(highlighted(bool)), this, SLOT(updatePortSpacing(bool)));
 }
 
 void ModuleWidget::addOutputPortsToLayout(int index)
@@ -886,6 +886,7 @@ void ModuleWidget::addDynamicPort(const ModuleId& mid, const PortId& pid)
     hookUpGeneralPortSignals(w);
     connect(this, SIGNAL(connectionAdded(const SCIRun::Dataflow::Networks::ConnectionDescription&)), w, SLOT(MakeTheConnection(const SCIRun::Dataflow::Networks::ConnectionDescription&)));
     ports_->addPort(w);
+    ports_->reindexInputs();
     inputPortLayout_->addWidget(w);
 
     Q_EMIT dynamicPortChanged(pid.toString());
@@ -1351,7 +1352,7 @@ void ModuleWidget::handleDialogFatalError(const QString& message)
   qDebug() << "Dialog error: " << message;
   updateBackgroundColor(colorStateLookup.right.at((int)ModuleExecutionState::Errored));
   colorLocked_ = true;
-  setStartupNote("MODULE FATAL ERROR, DO NOT USE THIS INSTANCE. \nDelete and re-add to network for proper execution.");
+  setStartupNote("MODULE FATAL ERROR, DO NOT USE THIS INSTANCE. \nClick \"Refresh\" button to replace module for proper execution.");
 
   //This is entirely ViewScene-specific.
   disconnect(currentDisplay_->getOptionsButton(), SIGNAL(clicked()), this, SLOT(toggleOptionsDialog()));
