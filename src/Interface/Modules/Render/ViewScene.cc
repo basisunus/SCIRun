@@ -89,6 +89,7 @@ ViewSceneDialog::ViewSceneDialog(const std::string& name, ModuleStateHandle stat
 	  if (SCIRun::Core::Preferences::Instance().useNewViewSceneMouseControls)
 	  {
 		  spire->setMouseMode(Render::SRInterface::MOUSE_NEWSCIRUN);
+      spire->setZoomInverted(SCIRun::Core::Preferences::Instance().invertMouseZoom);      
 	  }
 	  else
 	  {
@@ -235,6 +236,7 @@ void ViewSceneDialog::menuMouseControlChanged(int index)
 		spire->setMouseMode(SRInterface::MOUSE_NEWSCIRUN);
 		SCIRun::Core::Preferences::Instance().useNewViewSceneMouseControls.setValue(true);
 	}
+  mConfigurationDock->updateZoomOptionVisibility();
 }
 
 //------------------------------------------------------------------------------
@@ -500,6 +502,21 @@ void ViewSceneDialog::deselectAllClicked()
   itemValueChanged_ = true;
   unselectedObjectNames_ = previousObjectNames_;
   newGeometryValue();
+}
+
+//------------------------------------------------------------------------------
+void ViewSceneDialog::adjustZoomSpeed(int value)
+{
+  std::shared_ptr<Render::SRInterface> spire = mSpire.lock();
+  spire->setZoomSpeed(value);
+}
+
+//------------------------------------------------------------------------------
+void ViewSceneDialog::invertZoomClicked(bool value)
+{
+  std::shared_ptr<Render::SRInterface> spire = mSpire.lock();
+  spire->setZoomInverted(value);
+  SCIRun::Core::Preferences::Instance().invertMouseZoom.setValue(value);
 }
 
 //------------------------------------------------------------------------------

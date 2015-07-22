@@ -134,6 +134,12 @@ namespace SCIRun {
             
             /// Retrieves mouse interaction mode.
             MouseMode getMouseMode();
+
+            /// Sets zoom speed
+            void setZoomSpeed(int zoomSpeed);
+
+            /// Sets zoom inverted/not inverted
+            void setZoomInverted(bool value);
             
             /// Performs an autoview.
             void doAutoView();
@@ -259,7 +265,7 @@ namespace SCIRun {
             bool                              widgetSelected_;  ///< Whether or not a widget is currently selected.
             bool                              widgetExists_;    ///< Geometry contains a widget to find.
             
-            
+            int                               mZoomSpeed;
             MouseMode                         mMouseMode;       ///< Current mouse mode.
             
             
