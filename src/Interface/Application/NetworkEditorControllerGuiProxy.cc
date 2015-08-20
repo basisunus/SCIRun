@@ -60,6 +60,7 @@ void NetworkEditorControllerGuiProxy::addModule(const std::string& moduleName)
   }
   catch (SCIRun::Core::InvalidArgumentException& e)
   {
+    qDebug() << "CAUGHT EXCEPTION";
     Core::Logging::Log::get() << Core::Logging::ERROR_LOG << e.what() << std::endl;
   }
 }
@@ -89,9 +90,19 @@ NetworkFileHandle NetworkEditorControllerGuiProxy::saveNetwork() const
   return controller_->saveNetwork();
 }
 
+NetworkFileHandle NetworkEditorControllerGuiProxy::serializeNetworkFragment(ModuleFilter modFilter, ConnectionFilter connFilter) const
+{
+  return controller_->serializeNetworkFragment(modFilter, connFilter);
+}
+
 void NetworkEditorControllerGuiProxy::loadNetwork(const NetworkFileHandle& xml)
 {
   controller_->loadNetwork(xml);
+}
+
+void NetworkEditorControllerGuiProxy::appendToNetwork(const NetworkFileHandle& xml)
+{
+  controller_->appendToNetwork(xml);
 }
 
 void NetworkEditorControllerGuiProxy::executeAll(const ExecutableLookup& lookup)

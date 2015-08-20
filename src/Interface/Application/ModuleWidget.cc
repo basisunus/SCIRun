@@ -88,6 +88,7 @@ namespace Gui {
         << new QAction("Duplicate", parent)
         << new QAction("Replace With", parent)
         << new QAction("Collapse", parent)
+        << disabled(new QAction("Ignore*", parent))
         << new QAction("Show Log", parent)
         //<< disabled(new QAction("Make Sub-Network", parent))  // Issue #287
         << separatorAction(parent)
@@ -96,12 +97,12 @@ namespace Gui {
     QMenu* getMenu() { return menu_; }
     QAction* getAction(const char* name) const
     {
-      BOOST_FOREACH(QAction* action, menu_->actions())
+      for (const auto& action : menu_->actions())
       {
         if (action->text().contains(name))
           return action;
       }
-      return 0;
+      return nullptr;
     }
   private:
     QMenu* menu_;
@@ -654,6 +655,13 @@ void ModuleWidget::postLoadAction()
   connect(this, SIGNAL(connectionDeleted(const SCIRun::Dataflow::Networks::ConnectionId&)), this, SLOT(fillReplaceWithMenu()));
 }
 
+bool ModuleWidget::guiVisible() const
+{
+  if (dockable_)
+    return dockable_->isVisible();
+  return false;
+}
+
 void ModuleWidget::fillReplaceWithMenu()
 {
   auto menu = getReplaceWithMenu();
@@ -808,7 +816,7 @@ void PortWidgetManager::addInputsToLayout(QHBoxLayout* layout)
   if (inputPorts_.empty())
     layout->addWidget(new BlankPort(layout->parentWidget()));
 
-  BOOST_FOREACH(PortWidget* port, inputPorts_)
+  for (PortWidget* port : inputPorts_)
     layout->addWidget(port);
 
   layout->setSizeConstraint(QLayout::SetMinimumSize);
@@ -821,7 +829,7 @@ void PortWidgetManager::addOutputsToLayout(QHBoxLayout* layout)
   if (outputPorts_.empty())
     layout->addWidget(new BlankPort(layout->parentWidget()));
 
-  BOOST_FOREACH(PortWidget* port, outputPorts_)
+  for (PortWidget* port : outputPorts_)
     layout->addWidget(port);
 
   layout->setSizeConstraint(QLayout::SetMinimumSize);

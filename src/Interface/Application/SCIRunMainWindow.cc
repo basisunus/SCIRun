@@ -43,14 +43,11 @@
 #include <Interface/Application/PreferencesWindow.h>
 #include <Interface/Application/TagManagerWindow.h>
 #include <Interface/Application/ShortcutsInterface.h>
-#include <Interface/Application/PythonConsoleWidget.h>
 #include <Interface/Application/TreeViewCollaborators.h>
 #include <Interface/Application/MainWindowCollaborators.h>
 #include <Interface/Application/GuiCommandFactory.h>
 #include <Interface/Application/GuiCommands.h>
-#include <Interface/Application/Utility.h>
 #include <Interface/Application/ModuleProxyWidget.h>
-#include <Core/Logging/LoggerInterface.h>
 #include <Interface/Application/NetworkEditorControllerGuiProxy.h>
 #include <Interface/Application/NetworkExecutionProgressBar.h>
 #include <Interface/Application/DialogErrorControl.h>
@@ -69,7 +66,6 @@
 #include <Dataflow/Serialization/Network/NetworkDescriptionSerialization.h>
 
 #include <Core/Command/CommandFactory.h>
-#include <Core/Python/PythonInterpreter.h>
 
 using namespace SCIRun;
 using namespace SCIRun::Gui;
@@ -169,16 +165,13 @@ SCIRunMainWindow::SCIRunMainWindow() : shortcuts_(0), firstTimePythonShown_(true
   standardBar->addAction(actionCenterNetworkViewer_);
   standardBar->addAction(actionZoomIn_);
   standardBar->addAction(actionZoomOut_);
-  //TODO: requires some real code
-  actionZoomBestFit_->setDisabled(true);
   //standardBar->addAction(actionZoomBestFit_);
-	menuNetwork->removeAction(actionZoomBestFit_);
+  actionZoomBestFit_->setDisabled(true);
   standardBar->addAction(actionResetNetworkZoom_);
   standardBar->addAction(actionDragMode_);
   standardBar->addAction(actionSelectMode_);
   standardBar->addAction(actionToggleMetadataLayer_);
   standardBar->addAction(actionToggleTagLayer_);
-  //standardBar->setStyleSheet(styleSheet());
   //setUnifiedTitleAndToolBarOnMac(true);
 
   QToolBar* executeBar = addToolBar(tr("&Execute"));
@@ -195,19 +188,17 @@ SCIRunMainWindow::SCIRunMainWindow() : shortcuts_(0), firstTimePythonShown_(true
   executeBar->setStyleSheet("QToolBar { background-color: rgb(66,66,69); border: 1px solid black; color: black }"
 		"QToolTip { color: #ffffff; background - color: #2a82da; border: 1px solid white; }"
 		);
-  //executeBar->setStyleSheet(styleSheet());
   executeBar->setAutoFillBackground(true);
 
-  scrollAreaWidgetContents_->addAction(actionExecute_All_);
+  networkEditor_->addAction(actionExecute_All_);
   auto sep = new QAction(this);
   sep->setSeparator(true);
-  scrollAreaWidgetContents_->addAction(sep);
-  scrollAreaWidgetContents_->addActions(networkEditor_->getModuleSpecificActions());
-  scrollAreaWidgetContents_->setStyleSheet(styleSheet());
+  networkEditor_->addAction(sep);
+  networkEditor_->addAction(actionCut_);
+  networkEditor_->addAction(actionCopy_);
+  networkEditor_->addAction(actionPaste_);
 
-  //TODO???????
   setContextMenuPolicy(Qt::NoContextMenu);
-  //scrollAreaWidgetContents_->setContextMenuPolicy(Qt::ActionsContextMenu);
 
   scrollArea_->viewport()->setBackgroundRole(QPalette::Dark);
   scrollArea_->viewport()->setAutoFillBackground(true);
@@ -280,9 +271,6 @@ SCIRunMainWindow::SCIRunMainWindow() : shortcuts_(0), firstTimePythonShown_(true
 
   makeFilterButtonMenu();
 
-  //connect(networkEditor_, SIGNAL(sceneChanged(const QList<QRectF>&)), this, SLOT(updateMiniView()));
-  //connect(networkEditor_->verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(updateMiniView()));
-  //connect(networkEditor_->horizontalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(updateMiniView()));
   if (newInterface())
     networkEditor_->setBackgroundBrush(QPixmap(":/general/Resources/SCIgrid-small.png"));
 
@@ -307,6 +295,13 @@ SCIRunMainWindow::SCIRunMainWindow() : shortcuts_(0), firstTimePythonShown_(true
   connect(networkEditor_, SIGNAL(zoomLevelChanged(int)), this, SLOT(showZoomStatusMessage(int)));
   connect(actionCenterNetworkViewer_, SIGNAL(triggered()), networkEditor_, SLOT(centerView()));
 
+	connect(actionCut_, SIGNAL(triggered()), networkEditor_, SLOT(cut()));
+	connect(actionCopy_, SIGNAL(triggered()), networkEditor_, SLOT(copy()));
+	connect(actionPaste_, SIGNAL(triggered()), networkEditor_, SLOT(paste()));
+  actionCut_->setIcon(QPixmap(":/general/Resources/cut.png"));
+  actionCopy_->setIcon(QPixmap(":/general/Resources/copy.png"));
+  actionPaste_->setIcon(QPixmap(":/general/Resources/paste.png"));
+
   connect(actionKeyboardShortcuts_, SIGNAL(triggered()), this, SLOT(showKeyboardShortcutsDialog()));
 
   //TODO: store in xml file, add to app resources
@@ -314,11 +309,13 @@ SCIRunMainWindow::SCIRunMainWindow() : shortcuts_(0), firstTimePythonShown_(true
   actionForwardInverse_->setProperty(ToolkitIconURL, QString("http://www.sci.utah.edu/images/software/forward-inverse/forward-inverse-mod.png"));
   actionForwardInverse_->setProperty(ToolkitURL, QString("http://sci.utah.edu/devbuilds/scirun5/toolkits/FwdInvToolkit_v1.zip"));
   actionForwardInverse_->setProperty(ToolkitFilename, QString("FwdInvToolkit_v1.zip"));
+  actionForwardInverse_->setIcon(QPixmap(":/general/Resources/download.png"));
 
 	connect(actionBrainStimulator_, SIGNAL(triggered()), this, SLOT(toolkitDownload()));
   actionBrainStimulator_->setProperty(ToolkitIconURL, QString("http://www.sci.utah.edu/images/software/BrainStimulator/brain-stimulator-mod.png"));
   actionBrainStimulator_->setProperty(ToolkitURL, QString("http://sci.utah.edu/devbuilds/scirun5/toolkits/BrainStimulator_v1.2.zip"));
   actionBrainStimulator_->setProperty(ToolkitFilename, QString("BrainStimulator_v1.2.zip"));
+  actionBrainStimulator_->setIcon(QPixmap(":/general/Resources/download.png"));
 
   connect(networkEditor_, SIGNAL(networkExecuted()), networkProgressBar_.get(), SLOT(resetModulesDone()));
   connect(networkEditor_->moduleEventProxy().get(), SIGNAL(moduleExecuteEnd(const std::string&)), networkProgressBar_.get(), SLOT(incrementModulesDone()));
@@ -373,6 +370,7 @@ void SCIRunMainWindow::postConstructionSignalHookup()
   connect(networkEditor_->getNetworkEditorController().get(), SIGNAL(executionStarted()), &WidgetDisablingService::Instance(), SLOT(disableInputWidgets()));
   connect(networkEditor_->getNetworkEditorController().get(), SIGNAL(executionFinished(int)), &WidgetDisablingService::Instance(), SLOT(enableInputWidgets()));
   connect(networkEditor_->getNetworkEditorController().get(), SIGNAL(executionFinished(int)), this, SLOT(changeExecuteActionIconToPlay()));
+  connect(networkEditor_->getNetworkEditorController().get(), SIGNAL(executionFinished(int)), this, SLOT(alertForNetworkCycles(int)));
 
 	connect(networkEditor_, SIGNAL(disableWidgetDisabling()), &WidgetDisablingService::Instance(), SLOT(temporarilyDisableService()));
   connect(networkEditor_, SIGNAL(reenableWidgetDisabling()), &WidgetDisablingService::Instance(), SLOT(temporarilyEnableService()));
@@ -391,6 +389,9 @@ void SCIRunMainWindow::postConstructionSignalHookup()
   connect(networkEditor_, SIGNAL(moduleMoved(const SCIRun::Dataflow::Networks::ModuleId&, double, double)),
     commandConverter_.get(), SLOT(moduleMoved(const SCIRun::Dataflow::Networks::ModuleId&, double, double)));
   connect(provenanceWindow_, SIGNAL(modifyingNetwork(bool)), commandConverter_.get(), SLOT(networkBeingModifiedByProvenanceManager(bool)));
+  connect(networkEditor_, SIGNAL(newModule(const QString&, bool)), this, SLOT(addModuleToWindowList(const QString&, bool)));
+  connect(networkEditor_->getNetworkEditorController().get(), SIGNAL(moduleRemoved(const SCIRun::Dataflow::Networks::ModuleId&)),
+    this, SLOT(removeModuleFromWindowList(const SCIRun::Dataflow::Networks::ModuleId&)));
 }
 
 void SCIRunMainWindow::setTipsAndWhatsThis()
@@ -825,10 +826,14 @@ void SCIRunMainWindow::zoomNetwork()
     {
       networkEditor_->zoomReset();
     }
+    else if (name == "Zoom Best Fit")
+    {
+      networkEditor_->zoomBestFit();
+    }
   }
   else
   {
-    std::cerr << "Sender was null or not an action" << std::endl;
+    qDebug() << "Sender was null or not an action";
   }
 }
 
@@ -1010,12 +1015,34 @@ namespace {
         return top;
       }
     }
-    return 0;
+    return nullptr;
   }
 
-//TODO working on this
-#if 0
-	void addSnippetMenu(QTreeWidget* tree)
+  void addSnippet(const QString& code, QTreeWidgetItem* snips)
+  {
+    auto snipItem = new QTreeWidgetItem();
+    snipItem->setText(0, code);
+    snips->addChild(snipItem);
+  }
+
+  void readCustomSnippets(QTreeWidgetItem* snips)
+  {
+    QFile inputFile("snippets.txt");
+    if (inputFile.open(QIODevice::ReadOnly))
+    {
+      GuiLogger::Instance().logInfo("Snippet file opened: " + inputFile.fileName());
+      QTextStream in(&inputFile);
+      while (!in.atEnd())
+      {
+        QString line = in.readLine();
+        addSnippet(line, snips);
+        GuiLogger::Instance().logInfo("Snippet read: " + line);
+      }
+      inputFile.close();
+    }
+  }
+
+  void addSnippetMenu(QTreeWidget* tree)
 	{
 		auto snips = new QTreeWidgetItem();
 		snips->setText(0, "Snippets");
@@ -1023,35 +1050,18 @@ namespace {
 
 		//hard-code a few popular ones.
 
-		auto snipItem = new QTreeWidgetItem();
-		snipItem->setText(0, "ReadField->ShowField->ViewScene");
-		snips->addChild(snipItem);
-		snipItem = new QTreeWidgetItem();
-		snipItem->setText(0, "CreateLatVol->ShowField->ViewScene");
-		snips->addChild(snipItem);
-		snipItem = new QTreeWidgetItem();
-		snipItem->setText(0, "ReadField->ReportFieldInfo");
-		snips->addChild(snipItem);
-		snipItem = new QTreeWidgetItem();
-		snipItem->setText(0, "CreateStandardColorMap->RescaleColorMap->ShowField->ViewScene");
-		snips->addChild(snipItem);
+    addSnippet("[ReadField->ShowField->ViewScene]", snips);
+    addSnippet("[CreateLatVol->ShowField->ViewScene]", snips);
+    addSnippet("[ReadField->ReportFieldInfo]", snips);
+    addSnippet("[CreateStandardColorMap->RescaleColorMap->ShowField->ViewScene]", snips);
+    addSnippet("[GetFieldBoundary->FairMesh->ShowField]", snips);
+    //TODO coming later, with grammar
+		//addSnippet("[CreateLatVol->(CreateStandardColorMap->RescaleColorMap->ShowField)->ViewScene]", snips);
 
-		tree->addTopLevelItem(snips);
-	}
+	  readCustomSnippets(snips);
 
-	QTreeWidgetItem* getSnippetMenu(QTreeWidget* tree)
-	{
-		for (int i = 0; i < tree->topLevelItemCount(); ++i)
-		{
-			auto top = tree->topLevelItem(i);
-			if (top->text(0) == "Snippets")
-			{
-				return top;
-			}
-		}
-		return 0;
+	  tree->addTopLevelItem(snips);
 	}
-#endif
 
   void addFavoriteItem(QTreeWidgetItem* faves, QTreeWidgetItem* module)
   {
@@ -1066,7 +1076,7 @@ namespace {
     QTreeWidgetItem* faves = getFavoriteMenu(tree);
 		for (const auto& package : moduleMap)
     {
-      const std::string& packageName = package.first;
+      const auto& packageName = package.first;
       auto packageItem = new QTreeWidgetItem();
       packageItem->setText(0, QString::fromStdString(packageName));
       packageItem->setForeground(0, packageColor());
@@ -1074,14 +1084,14 @@ namespace {
       size_t totalModules = 0;
       for (const auto& category : package.second)
       {
-        const std::string& categoryName = category.first;
+        const auto& categoryName = category.first;
         auto categoryItem = new QTreeWidgetItem();
         categoryItem->setText(0, QString::fromStdString(categoryName));
         categoryItem->setForeground(0, categoryColor());
         packageItem->addChild(categoryItem);
 				for (const auto& module : category.second)
         {
-          const std::string& moduleName = module.first;
+          const auto& moduleName = module.first;
           auto moduleItem = new QTreeWidgetItem();
           auto name = QString::fromStdString(moduleName);
           moduleItem->setText(0, name);
@@ -1124,7 +1134,7 @@ void SCIRunMainWindow::fillModuleSelector()
   auto moduleDescs = networkEditor_->getNetworkEditorController()->getAllAvailableModuleDescriptions();
 
   addFavoriteMenu(moduleSelectorTreeWidget_);
-	//addSnippetMenu(moduleSelectorTreeWidget_);
+	addSnippetMenu(moduleSelectorTreeWidget_);
   fillTreeWidget(moduleSelectorTreeWidget_, moduleDescs, favoriteModuleNames_);
   sortFavorites(moduleSelectorTreeWidget_);
 
@@ -1243,117 +1253,6 @@ bool SCIRunMainWindow::newInterface() const
   return Core::Application::Instance().parameters()->entireCommandLine().find("--originalGUI") == std::string::npos;
 }
 
-namespace {
-
-  void addElementDataToMap(QXmlStreamReader& xml, QMap<QString, QString>& map)
-  {
-    if (xml.tokenType() != QXmlStreamReader::StartElement)
-    {
-      std::cout << "didn't find start" << std::endl;
-      return;
-    }
-    QString elementName = xml.name().toString();
-    xml.readNext();
-    if (xml.tokenType() != QXmlStreamReader::Characters)
-    {
-      std::cout << "not char data" << std::endl;
-      return;
-    }
-    map.insert(elementName, xml.text().toString());
-  }
-
-  void addItemDataToMap(QXmlStreamReader& xml, QMap<QString, QString>& map)
-  {
-    if (xml.tokenType() != QXmlStreamReader::StartElement)
-    {
-      std::cout << "didn't find start 2" << std::endl;
-      return;
-    }
-    xml.readNext();
-    if (xml.tokenType() != QXmlStreamReader::Characters)
-    {
-      std::cout << "not char data 2" << std::endl;
-      return;
-    }
-    QXmlStreamAttributes attributes = xml.attributes();
-    if (attributes.hasAttribute("key") && attributes.hasAttribute("value"))
-    {
-      map[attributes.value("key").toString()] = attributes.value("value").toString();
-    }
-    else
-      std::cout << 333 << std::endl;
-  }
-
-  QMap<QString, QString> parseStyle(QXmlStreamReader& xml)
-  {
-    QMap<QString, QString> style;
-    if (xml.tokenType() != QXmlStreamReader::StartElement && xml.name() == "style")
-    {
-      std::cout << "didn't find style" << std::endl;
-      return style;
-    }
-
-    xml.readNext();
-
-    while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == "style"))
-    {
-      if (xml.tokenType() == QXmlStreamReader::StartElement)
-      {
-        if (xml.name() == "template")
-          addElementDataToMap(xml, style);
-        if (xml.name() == "item")
-          addItemDataToMap(xml, style);
-      }
-      else
-        std::cout << 222 << std::endl;
-      xml.readNext();
-    }
-    return style;
-  }
-
-}
-
-void SCIRunMainWindow::parseStyleXML()
-{
-  std::cout << "parsing style xml" << std::endl;
-  QFile file("./styleSheetDetails.xml");
-  if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-  {
-    QMessageBox::critical(this, "SCIRun", "Couldn't open styleSheetDetails.xml", QMessageBox::Ok);
-    return;
-  }
-  QXmlStreamReader xml(&file);
-  while (!xml.atEnd() && !xml.hasError())
-  {
-    QXmlStreamReader::TokenType token = xml.readNext();
-    if (token == QXmlStreamReader::StartDocument) {
-      continue;
-    }
-    if (token == QXmlStreamReader::StartElement) {
-      if(xml.name() == "styles") {
-        continue;
-      }
-      std::cout << "found: " << xml.name().toString().toStdString() << std::endl;
-      if(xml.name() == "style") {
-        QXmlStreamAttributes attributes = xml.attributes();
-        if (attributes.hasAttribute("widgetType"))
-        {
-          styleSheetDetails_[attributes.value("widgetType").toString()] = parseStyle(xml);
-        }
-        else
-          std::cout << "111" << std::endl;
-      }
-    }
-  }
-
-  if (xml.hasError())
-  {
-    QMessageBox::critical(this, "SCIRun", xml.errorString(), QMessageBox::Ok);
-  }
-  xml.clear();
-  printStyleSheet();
-}
-
 void SCIRunMainWindow::printStyleSheet() const
 {
   std::cout << "Printing style sheet details map" << std::endl;
@@ -1409,7 +1308,7 @@ void SCIRunMainWindow::resetWindowLayout()
   moduleSelectorDockWidget_->setFloating(false);
   addDockWidget(Qt::LeftDockWidgetArea, moduleSelectorDockWidget_);
 
-  std::cout << "TODO: toolbars" << std::endl;
+  qDebug() << "TODO: toolbars";
 }
 
 void SCIRunMainWindow::hideNonfunctioningWidgets()
@@ -1417,14 +1316,10 @@ void SCIRunMainWindow::hideNonfunctioningWidgets()
   QList<QAction*> nonfunctioningActions;
   nonfunctioningActions <<
     actionInsert_ <<
-    actionCreate_Module_Skeleton_ <<
-    actionCut_ <<
-    actionCopy_ <<
-    actionPaste_;
+    actionCreate_Module_Skeleton_;
   QList<QMenu*> nonfunctioningMenus;
   nonfunctioningMenus <<
     menuSubnets_;
-		//<< menuToolkits_;
   QList<QWidget*> nonfunctioningWidgets;
   nonfunctioningWidgets <<
     prefsWindow_->scirunNetsLabel_ <<
@@ -1566,6 +1461,37 @@ void SCIRunMainWindow::adjustExecuteButtonAppearance()
   }
 }
 
+void SCIRunMainWindow::alertForNetworkCycles(int code)
+{
+  if (code == -1)
+  {
+    QMessageBox::warning(this, "Network graph has a cycle", "Your network contains a cycle. The execution scheduler cannot handle cycles at this time. Please ensure all cycles are broken before executing.");
+    networkEditor_->resetNetworkDueToCycle();
+  }
+}
+
+void SCIRunMainWindow::addModuleToWindowList(const QString& modId, bool hasUI)
+{
+  if (menuCurrent_->actions().isEmpty())
+    menuCurrent_->setEnabled(true);
+  auto modAction = new QAction(this);
+  modAction->setText(modId);
+  modAction->setEnabled(hasUI);
+  connect(modAction, SIGNAL(triggered()), networkEditor_, SLOT(moduleWindowAction()));
+  currentModuleActions_.insert(modId, modAction);
+  menuCurrent_->addAction(modAction);
+}
+
+void SCIRunMainWindow::removeModuleFromWindowList(const ModuleId& modId)
+{
+  auto name = QString::fromStdString(modId.id_);
+  auto action = currentModuleActions_[name];
+  menuCurrent_->removeAction(action);
+  currentModuleActions_.remove(name);
+  if (menuCurrent_->actions().isEmpty())
+    menuCurrent_->setEnabled(false);
+}
+
 void SCIRunMainWindow::setupTagManagerWindow()
 {
   tagManagerWindow_ = new TagManagerWindow(this);
@@ -1611,28 +1537,26 @@ void SCIRunMainWindow::showKeyboardShortcutsDialog()
   shortcuts_->show();
 }
 
-FileDownloader::FileDownloader(QUrl imageUrl, QObject *parent) : QObject(parent), reply_(0)
+FileDownloader::FileDownloader(QUrl imageUrl, QStatusBar* statusBar, QObject *parent) : QObject(parent), reply_(0), statusBar_(statusBar)
 {
  	connect(&webCtrl_, SIGNAL(finished(QNetworkReply*)), this, SLOT(fileDownloaded(QNetworkReply*)));
 
  	QNetworkRequest request(imageUrl);
 	reply_ = webCtrl_.get(request);
   connect(reply_, SIGNAL(downloadProgress(qint64, qint64)), this, SLOT(downloadProgress(qint64, qint64)));
-  //qDebug() << "request filed: " << imageUrl;
 }
 
 void FileDownloader::fileDownloaded(QNetworkReply* reply)
 {
-  //qDebug() << "slot called";
   downloadedData_ = reply->readAll();
 	reply->deleteLater();
-	//qDebug() << "file downloaded";
   Q_EMIT downloaded();
 }
 
 void FileDownloader::downloadProgress(qint64 received, qint64 total)
 {
-  //qDebug() << "File progress: " << received << " / " << total;
+  if (statusBar_)
+    statusBar_->showMessage(tr("File progress: %1 / %2").arg(received).arg(total), 1000);
 }
 
 void SCIRunMainWindow::toolkitDownload()
@@ -1640,10 +1564,10 @@ void SCIRunMainWindow::toolkitDownload()
 	QAction* action = qobject_cast<QAction*>(sender());
 
 	static std::vector<ToolkitDownloader*> downloaders;
-	downloaders.push_back(new ToolkitDownloader(action, this));
+  downloaders.push_back(new ToolkitDownloader(action, statusBar(), this));
 }
 
-ToolkitDownloader::ToolkitDownloader(QObject* infoObject, QWidget* parent) : QObject(parent), iconDownloader_(0), zipDownloader_(0)
+ToolkitDownloader::ToolkitDownloader(QObject* infoObject, QStatusBar* statusBar, QWidget* parent) : QObject(parent), iconDownloader_(0), zipDownloader_(0), statusBar_(statusBar)
 {
   if (infoObject)
   {
@@ -1660,7 +1584,7 @@ ToolkitDownloader::ToolkitDownloader(QObject* infoObject, QWidget* parent) : QOb
 
 void ToolkitDownloader::downloadIcon()
 {
-  iconDownloader_ = new FileDownloader(iconUrl_, this);
+  iconDownloader_ = new FileDownloader(iconUrl_, nullptr, this);
   connect(iconDownloader_, SIGNAL(downloaded()), this, SLOT(showMessageBox()));
 }
 
@@ -1692,7 +1616,7 @@ void ToolkitDownloader::showMessageBox()
     {
       //qDebug() << "directory selected " << dir;
       toolkitDir_ = dir;
-      zipDownloader_ = new FileDownloader(fileUrl_, this);
+      zipDownloader_ = new FileDownloader(fileUrl_, statusBar_, this);
       connect(zipDownloader_, SIGNAL(downloaded()), this, SLOT(saveToolkit()));
     }
   }
