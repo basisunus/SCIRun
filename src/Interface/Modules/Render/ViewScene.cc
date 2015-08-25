@@ -34,7 +34,7 @@ DEALINGS IN THE SOFTWARE.
 #include <Core/Application/Preferences/Preferences.h>
 #include <Core/Logging/Log.h>
 #include <Modules/Render/ViewScene.h>
-
+#include <Interface/Modules/Render/Screenshot.h>
 
 using namespace SCIRun::Gui;
 using namespace SCIRun::Dataflow::Networks;
@@ -54,7 +54,7 @@ ViewSceneDialog::ViewSceneDialog(const std::string& name, ModuleStateHandle stat
   setWindowTitle(QString::fromStdString(name));
 
   addToolBar();
-  
+
   // Setup Qt OpenGL widget.
   QGLFormat fmt;
   fmt.setAlpha(true);
@@ -89,7 +89,7 @@ ViewSceneDialog::ViewSceneDialog(const std::string& name, ModuleStateHandle stat
 	  if (Core::Preferences::Instance().useNewViewSceneMouseControls)
 	  {
 		  spire->setMouseMode(SRInterface::MOUSE_NEWSCIRUN);
-      spire->setZoomInverted(Core::Preferences::Instance().invertMouseZoom);      
+      spire->setZoomInverted(Core::Preferences::Instance().invertMouseZoom);
 	  }
 	  else
 	  {
@@ -113,9 +113,9 @@ ViewSceneDialog::ViewSceneDialog(const std::string& name, ModuleStateHandle stat
     auto spire = mSpire.lock();
     spire->setBackgroundColor(bgColor_);
   }
-  
+
 	state->connect_state_changed(boost::bind(&ViewSceneDialog::newGeometryValueForwarder, this));
-  connect(this, SIGNAL(newGeometryValueForwarder()), this, SLOT(newGeometryValue())); 
+  connect(this, SIGNAL(newGeometryValueForwarder()), this, SLOT(newGeometryValue()));
 }
 
 void ViewSceneDialog::closeEvent(QCloseEvent *evt)
@@ -168,11 +168,14 @@ void ViewSceneDialog::newGeometryValue()
       objectNames.push_back(displayName.toStdString());
       if (!isObjectUnselected(displayName.toStdString()))
       {
-        auto realObj = boost::dynamic_pointer_cast<Graphics::Datatypes::GeometryImpl>(obj);
+        auto realObj = boost::dynamic_pointer_cast<Graphics::Datatypes::GeometryObjectSpire>(obj);
         if (realObj)
         {
           spire->handleGeomObject(realObj, port);
           validObjects.push_back(name);
+				#ifdef BUILD_TESTING
+					sendScreenshotDownstreamForTesting();
+				#endif
         }
       }
     }
@@ -181,7 +184,7 @@ void ViewSceneDialog::newGeometryValue()
     sort(objectNames.begin(), objectNames.end());
     if (previousObjectNames_ != objectNames)
     {
-      itemValueChanged_ = true;      
+      itemValueChanged_ = true;
       previousObjectNames_ = objectNames;
     }
     if (itemValueChanged_ && mConfigurationDock)
@@ -263,7 +266,6 @@ void ViewSceneDialog::viewBarButtonClicked()
 //------------------------------------------------------------------------------
 void ViewSceneDialog::viewAxisSelected(int index)
 {
-
 	mUpVectorBox->clear();
 	mUpVectorBox->addItem("------");
 	switch (index)
@@ -492,7 +494,7 @@ void ViewSceneDialog::selectAllClicked()
 {
   itemValueChanged_ = true;
   unselectedObjectNames_.clear();
-  newGeometryValue();  
+  newGeometryValue();
 }
 
 //------------------------------------------------------------------------------
@@ -535,7 +537,7 @@ void ViewSceneDialog::addToolBar()
 	//addObjectToggleMenu();
 
 	glLayout->addWidget(mToolBar);
-  
+
   addViewBar();
 }
 
@@ -690,45 +692,22 @@ void ViewSceneDialog::sendGeometryFeedbackToState(int x, int y)
   state_->setValue(Parameters::GeometryFeedbackInfo, coords);
 }
 
-void ViewSceneDialog::screenshotClicked()
+void ViewSceneDialog::takeScreenshot()
 {
   if (!screenshotTaker_)
     screenshotTaker_ = new Screenshot(mGLWidget, this);
 
   screenshotTaker_->takeScreenshot();
+}
+
+void ViewSceneDialog::screenshotClicked()
+{
+  takeScreenshot();
   screenshotTaker_->saveScreenshot();
 }
 
-
-/// Start of Screenshot
-const QString filePath = QDir::homePath() + QLatin1String("/scirun5screenshots");
-
-Screenshot::Screenshot(QGLWidget *glwidget, QObject *parent)
-  : QObject(parent),
-  viewport_(glwidget),
-  index_(0)
+void ViewSceneDialog::sendScreenshotDownstreamForTesting()
 {
-  QDir dir(filePath);
-  if (!dir.exists())
-  {
-    dir.mkpath(filePath);
-  }
-}
-
-void Screenshot::takeScreenshot()
-{
-  screenshot_ = viewport_->grabFrameBuffer();
-}
-
-void Screenshot::saveScreenshot()
-{
-  index_++;
-  QString fileName = screenshotFile();
-	QMessageBox::information(nullptr, "ViewScene Screenshot", "Saving ViewScene screenshot to: " + fileName);
-  screenshot_.save(fileName);
-}
-
-QString Screenshot::screenshotFile() const
-{
-  return filePath + QString("/viewScene_%1_%2.png").arg(QDateTime::currentDateTime().toString("yyyy.MM.dd.HHmmss.zzz")).arg(index_);
+  takeScreenshot();
+  state_->setTransientValue(Parameters::ScreenshotData, screenshotTaker_->toMatrix(), false);
 }

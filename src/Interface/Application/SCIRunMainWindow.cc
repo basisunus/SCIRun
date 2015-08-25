@@ -197,7 +197,15 @@ SCIRunMainWindow::SCIRunMainWindow() : shortcuts_(0), firstTimePythonShown_(true
   networkEditor_->addAction(actionCut_);
   networkEditor_->addAction(actionCopy_);
   networkEditor_->addAction(actionPaste_);
-
+	sep = new QAction(this);
+  sep->setSeparator(true);
+	networkEditor_->addAction(sep);
+	networkEditor_->addAction(actionResetNetworkZoom_);
+	networkEditor_->addAction(actionDragMode_);
+  networkEditor_->addAction(actionSelectMode_);
+  networkEditor_->addAction(actionToggleMetadataLayer_);
+  networkEditor_->addAction(actionToggleTagLayer_);
+  
   setContextMenuPolicy(Qt::NoContextMenu);
 
   scrollArea_->viewport()->setBackgroundRole(QPalette::Dark);
@@ -493,6 +501,12 @@ void SCIRunMainWindow::executeAll()
     saveNetwork();
   }
 
+	if (Application::Instance().parameters()->isRegressionMode())
+	{
+		auto timeout = Application::Instance().parameters()->regressionTimeoutSeconds();
+		QTimer::singleShot(1000 * *timeout, this, SLOT(networkTimedOut()));
+	}
+
   networkEditor_->executeAll();
 }
 
@@ -512,6 +526,11 @@ void SCIRunMainWindow::exitApplication(int code)
 void SCIRunMainWindow::quit()
 {
   exitApplication(0);
+}
+
+void SCIRunMainWindow::networkTimedOut()
+{
+	exitApplication(2);
 }
 
 void SCIRunMainWindow::saveNetwork()
@@ -562,7 +581,7 @@ bool SCIRunMainWindow::loadNetworkFile(const QString& filename)
     if (command.execute())
     {
       setCurrentFile(filename);
-      statusBar()->showMessage(tr("File loaded"), 2000);
+      statusBar()->showMessage(tr("File loaded: ") + filename, 2000);
       networkProgressBar_->updateTotalModules(networkEditor_->numModules());
       provenanceWindow_->clear();
       provenanceWindow_->showFile(command.openedFile_);
@@ -665,7 +684,7 @@ void SCIRunMainWindow::closeEvent(QCloseEvent* event)
 
 bool SCIRunMainWindow::okToContinue()
 {
-  if (isWindowModified() && !prefsWindow_->isRegression())  //TODO: regressionMode
+  if (isWindowModified() && !Application::Instance().parameters()->isRegressionMode())
   {
     int r = QMessageBox::warning(this, tr("SCIRun 5"), tr("The document has been modified.\n" "Do you want to save your changes?"),
       QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);

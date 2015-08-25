@@ -26,42 +26,57 @@
    DEALINGS IN THE SOFTWARE.
 */
 
-#if _WIN32
-#include <GL/glew.h>
-#endif
-#include <gtest/gtest.h>
-#include <Interface/Modules/Render/ES/SRInterface.h>
+#include <Core/Datatypes/DenseMatrix.h>
+#include <Interface/Modules/Render/Screenshot.h>
+#include <QGLWidget>
 
-using namespace SCIRun;
-using namespace Render;
-using namespace Gui;
+using namespace SCIRun::Gui;
+using namespace SCIRun::Core::Datatypes;
 
-TEST(SRInterfaceTest, CanInstantiateSRInterface)
+const QString filePath = QDir::homePath() + QLatin1String("/scirun5screenshots");
+
+Screenshot::Screenshot(QGLWidget *glwidget, QObject *parent)
+  : QObject(parent),
+  viewport_(glwidget),
+  index_(0)
 {
-  std::shared_ptr<GLContext> context;
-  SRInterface srinterface(context);
-}
-
-class DummyGLContext : public GLContext
-{
-public:
-  DummyGLContext() : GLContext(nullptr) {}
-  virtual void makeCurrent() override 
-  { 
-    std::cout << "DummyGLContext::makeCurrent called" << std::endl;
-  }
-  virtual void swapBuffers() override
+  QDir dir(filePath);
+  if (!dir.exists())
   {
-    std::cout << "DummyGLContext::swapBuffers called" << std::endl;
+    dir.mkpath(filePath);
   }
-};
-
-
-TEST(SRInterfaceTest, CanRenderEmptyFrame)
-{
-  std::shared_ptr<GLContext> context(new DummyGLContext);
-  SRInterface srinterface(context);
-
-  srinterface.doFrame(0, 50);
 }
 
+void Screenshot::takeScreenshot()
+{
+  screenshot_ = viewport_->grabFrameBuffer();
+}
+
+void Screenshot::saveScreenshot()
+{
+  index_++;
+  QString fileName = screenshotFile();
+  QMessageBox::information(nullptr, "ViewScene Screenshot", "Saving ViewScene screenshot to: " + fileName);
+  screenshot_.save(fileName);
+}
+
+QString Screenshot::screenshotFile() const
+{
+  return filePath + QString("/viewScene_%1_%2.png").arg(QDateTime::currentDateTime().toString("yyyy.MM.dd.HHmmss.zzz")).arg(index_);
+}
+
+DenseMatrixHandle Screenshot::toMatrix() const
+{
+  DenseMatrixHandle image(new DenseMatrix(screenshot_.height(), screenshot_.width()));
+  for (int i = 0; i < screenshot_.height(); i++)
+  {
+    const uchar* scan = screenshot_.scanLine(i);
+    const int depth = 4;
+    for (int j = 0; j < screenshot_.width(); j++)
+    {
+      auto pixel = scan + j*depth;
+      (*image)(i, j) = *pixel;
+    }
+  }
+  return image;
+}
