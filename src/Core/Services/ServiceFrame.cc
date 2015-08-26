@@ -117,12 +117,12 @@ namespace SCIRun {
 
     log_->putmsg("ServiceFrame: searching for service (" + servicename_ + ")");
 
-    if (!db_->isservice(servicename_))
+    if (!db_->isService(servicename_))
     {
       // A legitimate request was made, unfortunately we
       // do not have the service requested.
       // probably the package containing the service was not
-      // compiled. 
+      // compiled.
       // Hence we reply that the service is not available
 
       packet->settag(TAG_RQFL);
@@ -142,7 +142,7 @@ namespace SCIRun {
 
     // We tested before whether the service existed
     // So it should have a service info
-    auto si = db_->getserviceinfo(servicename_);
+    auto si = db_->getServiceInfo(servicename_);
 
     log_->putmsg("ServiceFrame: got service information record");
 
@@ -339,7 +339,7 @@ namespace SCIRun {
 
   bool ServiceFrame::runservice()
   {
-    auto info = db_->getserviceinfo(servicename_);
+    auto info = db_->getServiceInfo(servicename_);
 
     ServiceContext ctx;
     ctx.servicename = servicename_;

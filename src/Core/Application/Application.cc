@@ -167,7 +167,7 @@ NetworkEditorControllerHandle Application::controller()
 
     /// @todo split out into separate piece
     // TODO: turn off until Matlab services are converted.
-    // private_->start_eai();
+    private_->start_eai();
   }
   return private_->controller_;
 }

@@ -62,7 +62,6 @@ static std::string lib_ext = ".so";
 
 using namespace SCIRun;
 
-
 ServiceDB::ServiceDB()
 {
 }
@@ -71,9 +70,8 @@ ServiceDB::~ServiceDB()
 {
 }
 
-#if 0
 bool
-ServiceDB::findmaker(ServiceInfo* info)
+ServiceDB::findmaker(ServiceInfoHandle info)
 {
   std::string cat_bname, pak_bname;
   if (info->classpackagename == "SCIRun")
@@ -118,14 +116,11 @@ ServiceDB::findmaker(ServiceInfo* info)
   }
   return(true);
 }
-#endif
 
 void
-ServiceDB::loadpackages()
+ServiceDB::loadPackages()
 {
-#if SCIRUN4_CODE_TO_BE_ENABLED_LATER
   // Find the path to the package directory
-
   std::string packagepath;
 
   const char *srcdir = sci_getenv("SCIRUN_SRCDIR");
@@ -254,7 +249,7 @@ ServiceDB::loadpackages()
 
       parse_and_find_service_rcfile(new_service, xmldir);
 
-      // Now the XML and RC file are loaded use these to set up some 
+      // Now the XML and RC file are loaded use these to set up some
       // other features. Mainly preprocess data so we do not have to do
       // that every time a connection has to be made
 
@@ -284,12 +279,10 @@ ServiceDB::loadpackages()
         "' :\n - can't find symbol 'make_service_" << (*pi).second->classname << "'\n";
     }
   }
-#endif
 }
 
-#if 0
 void
-ServiceDB::parse_and_find_service_rcfile(ServiceInfo *new_service, const std::string& xmldir)
+ServiceDB::parse_and_find_service_rcfile(ServiceInfoHandle new_service, const std::string& xmldir)
 {
   // If no default rcfile is specified, this service does not have one
   // Hence we do not have to load and parse an rcfile
@@ -298,7 +291,7 @@ ServiceDB::parse_and_find_service_rcfile(ServiceInfo *new_service, const std::st
   new_service->parameters["fullrcfile"] = "";
   if (rcname == "") return;
 
-  // First check whether the SCIRUN_DIR/services directory exists 
+  // First check whether the SCIRUN_DIR/services directory exists
 
   std::string filename;
   bool foundrc = false;
@@ -336,7 +329,7 @@ ServiceDB::parse_and_find_service_rcfile(ServiceInfo *new_service, const std::st
     return;
   }
 
-  // If this one is a success 
+  // If this one is a success
   // try to copy this rc file to the SCIRun directory in the
   // users home directory
 
@@ -482,10 +475,9 @@ ServiceDB::parse_service_rcfile(ServiceInfo *new_service, const std::string& fil
   fclose(filein);
   return true;
 }
-#endif
 
 void
-ServiceDB::activateall()
+ServiceDB::activateAll()
 {
   for (auto pi = servicedb_.begin(); pi != servicedb_.end(); pi++)
   {
@@ -497,7 +489,7 @@ ServiceDB::activateall()
 }
 
 void
-ServiceDB::deactivateall()
+ServiceDB::deactivateAll()
 {
   for (auto pi = servicedb_.begin(); pi != servicedb_.end(); pi++)
   {
@@ -528,7 +520,7 @@ ServiceDB::deactivate(const std::string& name)
 
 
 bool
-ServiceDB::isservice(const std::string& servicename)
+ServiceDB::isService(const std::string& servicename)
 {
   if (servicedb_[servicename])
   {
@@ -539,7 +531,7 @@ ServiceDB::isservice(const std::string& servicename)
 
 
 ServiceInfoHandle
-ServiceDB::getserviceinfo(const std::string& servicename)
+ServiceDB::getServiceInfo(const std::string& servicename) const
 {
   return(servicedb_[servicename]);
 }
@@ -560,7 +552,7 @@ ServiceDB::clone() const
 }
 
 void
-ServiceDB::printservices()
+ServiceDB::printServices()
 {
   std::cout << "list of available services:\n";
   for (auto it = servicedb_.begin(); it != servicedb_.end(); it++)
