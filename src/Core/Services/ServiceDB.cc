@@ -218,14 +218,14 @@ ServiceDB::loadPackages()
       continue;
     }
 
-    for (std::map<int, char*>::iterator i = files->begin(); i != files->end(); i++)
+    for (auto i = files->begin(); i != files->end(); ++i)
     {
       ServiceNode node;
       ReadServiceNodeFromFile(node, (xmldir + "/" + (*i).second).c_str());
 
       if (node.servicename == "") continue;
 
-      ServiceInfo* new_service = new ServiceInfo;
+      ServiceInfoHandle new_service(new ServiceInfo);
 
       // zero the non object entries
       new_service->activated = false;
@@ -271,7 +271,7 @@ ServiceDB::loadPackages()
     }
   }
 
-  for (auto pi = servicedb_.begin(); pi != servicedb_.end(); pi++)
+  for (auto pi = servicedb_.begin(); pi != servicedb_.end(); ++pi)
   {
     if (!findmaker((*pi).second))
     {
@@ -335,8 +335,6 @@ ServiceDB::parse_and_find_service_rcfile(ServiceInfoHandle new_service, const st
 
   if (objdir != "")
   {
-
-
     std::string dirname = objdir + std::string("/services");
     struct stat buf;
     if (LSTAT(dirname.c_str(), &buf) < 0)
@@ -370,14 +368,13 @@ ServiceDB::parse_and_find_service_rcfile(ServiceInfoHandle new_service, const st
       new_service->parameters["fullrcfile"] = filename;
       return;
     }
-
   }
 
   return;
 }
 
 bool
-ServiceDB::parse_service_rcfile(ServiceInfo *new_service, const std::string& filename)
+ServiceDB::parse_service_rcfile(ServiceInfoHandle new_service, const std::string& filename)
 {
   FILE* filein = fopen(filename.c_str(), "r");
   if (!filein) return(false);
@@ -531,7 +528,7 @@ ServiceDB::isService(const std::string& servicename)
 
 
 ServiceInfoHandle
-ServiceDB::getServiceInfo(const std::string& servicename) const
+ServiceDB::getServiceInfo(const std::string& servicename)
 {
   return(servicedb_[servicename]);
 }
@@ -552,7 +549,7 @@ ServiceDB::clone() const
 }
 
 void
-ServiceDB::printServices()
+ServiceDB::printServices() const
 {
   std::cout << "list of available services:\n";
   for (auto it = servicedb_.begin(); it != servicedb_.end(); it++)

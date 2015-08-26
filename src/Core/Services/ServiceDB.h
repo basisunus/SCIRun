@@ -97,14 +97,14 @@ public:
   void    deactivate(const std::string& name);
 
   // Check whether a service exists
-  bool    isService(const std::string& servicename) const;
+  bool    isService(const std::string& servicename);
 
-  void    printServices();
+  void    printServices() const;
 
   // Get all the information that is contained in the services
   // database about a certain service The ServiceManager needs this to
   // launch a specified service
-  ServiceInfoHandle  getServiceInfo(const std::string& servicename) const;
+  ServiceInfoHandle  getServiceInfo(const std::string& servicename);
   ServiceDB*    clone() const;
 
   private:
