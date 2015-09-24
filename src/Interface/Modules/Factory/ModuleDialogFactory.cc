@@ -34,6 +34,7 @@
 #include <Interface/Modules/DataIO/ReadBundleDialog.h>
 #include <Interface/Modules/DataIO/WriteMatrixDialog.h>
 #include <Interface/Modules/DataIO/ReadFieldDialog.h>
+#include <Interface/Modules/DataIO/ReadNrrdDialog.h>
 #include <Interface/Modules/DataIO/WriteFieldDialog.h>
 #include <Interface/Modules/Math/EvaluateLinearAlgebraUnaryDialog.h>
 #include <Interface/Modules/Math/EvaluateLinearAlgebraBinaryDialog.h>
@@ -47,6 +48,7 @@
 #include <Interface/Modules/Math/ConvertMatrixTypeDialog.h>
 #include <Interface/Modules/Math/GetMatrixSliceDialog.h>
 #include <Interface/Modules/Math/BuildNoiseColumnMatrixDialog.h>
+#include <Interface/Modules/Math/CollectMatricesDialog.h>
 #include <Interface/Modules/String/CreateStringDialog.h>
 #include <Interface/Modules/String/NetworkNotesDialog.h>
 #include <Interface/Modules/String/PrintDatatypeDialog.h>
@@ -84,7 +86,6 @@
 #include <Interface/Modules/Fields/SetFieldDataToConstantValueDialog.h>
 #include <Interface/Modules/Fields/ConvertFieldBasisDialog.h>
 #include <Interface/Modules/Fields/SwapFieldDataWithMatrixEntriesDialog.h>
-#include <Interface/Modules/Fields/ConvertFieldBasisDialog.h>
 #include <Interface/Modules/Fields/ConvertIndicesToFieldDataDialog.h>
 #include <Interface/Modules/Fields/RegisterWithCorrespondencesDialog.h>
 #include <Interface/Modules/Forward/BuildBEMatrixDialog.h>
@@ -102,11 +103,12 @@
 #include <Interface/Modules/Bundle/InsertFieldsIntoBundleDialog.h>
 #include <Interface/Modules/Bundle/GetFieldsFromBundleDialog.h>
 #include <Interface/Modules/Bundle/ReportBundleInfoDialog.h>
+#include <Interface/Modules/Teem/ReportNrrdInfoDialog.h>
+#include <Interface/Modules/Teem/ConvertNrrdToFieldDialog.h>
+#include <Interface/Modules/Teem/ConvertNrrdToMatrixDialog.h>
 #include <Interface/Modules/Fields/ExtractSimpleIsosurfaceDialog.h>
 #include <Interface/Modules/Fields/ClipVolumeByIsovalueDialog.h>
 #include <boost/assign.hpp>
-#include <boost/functional/factory.hpp>
-#include <Dataflow/Network/ModuleStateInterface.h>
 
 using namespace SCIRun::Gui;
 using namespace SCIRun::Dataflow::Networks;
@@ -192,7 +194,12 @@ void ModuleDialogFactory::addDialogsToMakerMap1()
     ADD_MODULE_DIALOG(BuildNoiseColumnMatrix, BuildNoiseColumnMatrixDialog)
     ADD_MODULE_DIALOG(SwapFieldDataWithMatrixEntries, SwapFieldDataWithMatrixEntriesDialog)
     ADD_MODULE_DIALOG(BuildMappingMatrix, BuildMappingMatrixDialog)
+    ADD_MODULE_DIALOG(CollectMatrices, CollectMatricesDialog)
     ADD_MODULE_DIALOG(EditMeshBoundingBox, EditMeshBoundingBoxDialog)
+    ADD_MODULE_DIALOG(ReportNrrdInfo, ReportNrrdInfoDialog)
+    ADD_MODULE_DIALOG(ReadNrrd, ReadNrrdDialog)
+    ADD_MODULE_DIALOG(ConvertNrrdToField, ConvertNrrdToFieldDialog)
+    ADD_MODULE_DIALOG(ConvertNrrdToMatrix, ConvertNrrdToMatrixDialog)
     ADD_MODULE_DIALOG(GenerateSinglePointProbeFromField, GenerateSinglePointProbeFromFieldDialog)
     ADD_MODULE_DIALOG(GeneratePointSamplesFromField, GeneratePointSamplesFromFieldDialog)
     ADD_MODULE_DIALOG(GeneratePointSamplesFromFieldOrWidget, GeneratePointSamplesFromFieldOrWidgetDialog)

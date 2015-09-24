@@ -46,7 +46,6 @@ class QMenu;
 class QToolBar;
 class QAction;
 class QGraphicsScene;
-class DialogErrorControl;
 class QTimeLine;
 Q_DECLARE_METATYPE (std::string)
 
@@ -55,6 +54,8 @@ namespace SCIRun {
   namespace Dataflow { namespace Engine { class NetworkEditorController; struct DisableDynamicPortSwitch; struct ModuleCounter; }}
 
 namespace Gui {
+
+  class DialogErrorControl;
 
   class CurrentModuleSelection
   {
@@ -238,6 +239,7 @@ namespace Gui {
     void highlightTaggedItem(int tagValue);
     void resetNetworkDueToCycle();
     void moduleWindowAction();
+    void cleanUpNetwork();
 
   Q_SIGNALS:
     void addConnection(const SCIRun::Dataflow::Networks::ConnectionDescription&);

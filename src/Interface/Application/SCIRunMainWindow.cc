@@ -205,7 +205,7 @@ SCIRunMainWindow::SCIRunMainWindow() : shortcuts_(0), firstTimePythonShown_(true
   networkEditor_->addAction(actionSelectMode_);
   networkEditor_->addAction(actionToggleMetadataLayer_);
   networkEditor_->addAction(actionToggleTagLayer_);
-  
+
   setContextMenuPolicy(Qt::NoContextMenu);
 
   scrollArea_->viewport()->setBackgroundRole(QPalette::Dark);
@@ -221,6 +221,7 @@ SCIRunMainWindow::SCIRunMainWindow() : shortcuts_(0), firstTimePythonShown_(true
   actionQuit_->setShortcut(QKeySequence::Quit);
   connect(actionDelete_, SIGNAL(triggered()), networkEditor_, SLOT(del()));
   actionDelete_->setShortcuts(QList<QKeySequence>() << QKeySequence::Delete << Qt::Key_Backspace);
+	connect(actionCleanUpNetwork_, SIGNAL(triggered()), networkEditor_, SLOT(cleanUpNetwork()));
 
   connect(actionAbout_, SIGNAL(triggered()), this, SLOT(displayAcknowledgement()));
   connect(actionPinAllModuleUIs_, SIGNAL(triggered()), networkEditor_, SLOT(pinAllModuleUIs()));
@@ -355,6 +356,8 @@ SCIRunMainWindow::SCIRunMainWindow() : shortcuts_(0), firstTimePythonShown_(true
 		);
 
   hideNonfunctioningWidgets();
+
+  connect(moduleSelectorDockWidget_, SIGNAL(topLevelChanged(bool)), this, SLOT(updateDockWidgetProperties(bool)));
 
   statusBar()->addPermanentWidget(new QLabel("Version: " + QString::fromStdString(VersionInfo::GIT_VERSION_TAG)));
 
@@ -673,6 +676,7 @@ void SCIRunMainWindow::loadRecentNetwork()
 
 void SCIRunMainWindow::closeEvent(QCloseEvent* event)
 {
+  windowState_ = saveState();
   if (okToContinue())
   {
     writeSettings();
@@ -1366,6 +1370,28 @@ void SCIRunMainWindow::adjustModuleDock(int state)
   bool dockable = prefsWindow_->dockableModulesCheckBox_->isChecked();
   actionPinAllModuleUIs_->setEnabled(dockable);
   Preferences::Instance().modulesAreDockable.setValue(dockable);
+}
+
+void SCIRunMainWindow::showEvent(QShowEvent* event)
+{
+  restoreState(windowState_);
+  QMainWindow::showEvent(event);
+}
+
+void SCIRunMainWindow::hideEvent(QHideEvent * event)
+{
+  windowState_ = saveState();
+  QMainWindow::hideEvent(event);
+}
+
+void SCIRunMainWindow::updateDockWidgetProperties(bool isFloating)
+{
+  auto dock = qobject_cast<QDockWidget*>(sender());
+  if (dock && isFloating)
+  {
+    dock->setWindowFlags(Qt::Window);
+    dock->show();
+  }
 }
 
 #ifdef __APPLE__
