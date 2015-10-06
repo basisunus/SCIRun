@@ -41,7 +41,7 @@ using namespace SCIRun::Core::Algorithms::Fields;
 
 const ModuleLookupInfo FieldInfoPrinter::staticInfo_("FieldInfoPrinter", "MiscField", "SCIRun");
 
-FieldInfoPrinter::FieldInfoPrinter() : Module(staticInfo_)
+FieldInfoPrinter::FieldInfoPrinter() : Module(staticInfo_, false)
 {
   INITIALIZE_PORT(InputField);
   INITIALIZE_PORT(OutputField);
