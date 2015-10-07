@@ -47,22 +47,6 @@ PrintStringIntoString::PrintStringIntoString() : Module(staticInfo_)
   INITIALIZE_PORT(Format);
   INITIALIZE_PORT(Output);
 }
-/*
-void FieldInfoPrinter::execute()
-{
-  auto field = getRequiredInput(InputField);
-
-  ReportFieldInfoAlgorithm algo;
-  auto output = algo.run_generic(withInputData((InputField, field)));
-
-  auto info = optional_any_cast_or_default<SCIRun::Core::Algorithms::Fields::ReportFieldInfoAlgorithm::Outputs>(output.getTransient());
-  remark("Field type: " + info.type);
-
-  //std::cout << "field type: " << info.type << std::endl;
-
-  sendOutput(OutputField, field);
-}
-*/
 
 /// @class PrintStringIntoString
 /// @brief This module does a sprintf with input strings into a new string.
