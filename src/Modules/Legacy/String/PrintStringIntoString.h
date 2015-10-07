@@ -34,7 +34,7 @@
 
 namespace SCIRun {
 namespace Modules {
-namespace String {
+namespace StringManip {
 
   /// @class PrintStringIntoString
   /// @brief sprintf wrapper
@@ -52,6 +52,8 @@ namespace String {
     INPUT_PORT(0, Format, String);
     INPUT_PORT_DYNAMIC(1, Input, String);
     OUTPUT_PORT(0, Output, String);
+
+    static const Dataflow::Networks::ModuleLookupInfo staticInfo_;
   };
 }}}
 
