@@ -6,7 +6,7 @@
    Copyright (c) 2015 Scientific Computing and Imaging Institute,
    University of Utah.
 
-   
+
    Permission is hereby granted, free of charge, to any person obtaining a
    copy of this software and associated documentation files (the "Software"),
    to deal in the Software without restriction, including without limitation
@@ -26,23 +26,48 @@
    DEALINGS IN THE SOFTWARE.
 */
 
+#include <Modules/Legacy/String/PrintStringIntoString.h>
 #include <stdio.h>
-#include <Dataflow/Network/Module.h>
 
 #include <Core/Datatypes/String.h>
-#include <Dataflow/Network/Ports/StringPort.h>
 
 #ifdef _WIN32
 #define snprintf _snprintf
 #endif
 
-namespace SCIRun {
+using namespace SCIRun::Modules::StringManip;
+using namespace SCIRun::Core::Datatypes;
+using namespace SCIRun::Dataflow::Networks;
 
-using namespace SCIRun;
+const ModuleLookupInfo PrintStringIntoString::staticInfo_("PrintStringIntoString", "String", "SCIRun");
+
+PrintStringIntoString::PrintStringIntoString() : Module(staticInfo_)
+{
+  INITIALIZE_PORT(Input);
+  INITIALIZE_PORT(Format);
+  INITIALIZE_PORT(Output);
+}
+/*
+void FieldInfoPrinter::execute()
+{
+  auto field = getRequiredInput(InputField);
+
+  ReportFieldInfoAlgorithm algo;
+  auto output = algo.run_generic(withInputData((InputField, field)));
+
+  auto info = optional_any_cast_or_default<SCIRun::Core::Algorithms::Fields::ReportFieldInfoAlgorithm::Outputs>(output.getTransient());
+  remark("Field type: " + info.type);
+
+  //std::cout << "field type: " << info.type << std::endl;
+
+  sendOutput(OutputField, field);
+}
+*/
 
 /// @class PrintStringIntoString
-/// @brief This module does a sprintf with input strings into a new string. 
+/// @brief This module does a sprintf with input strings into a new string.
 
+/*
 class PrintStringIntoString : public Module {
   public:
     PrintStringIntoString(GuiContext*);
@@ -54,36 +79,46 @@ class PrintStringIntoString : public Module {
 };
 
 
-DECLARE_MAKER(PrintStringIntoString)
 PrintStringIntoString::PrintStringIntoString(GuiContext* ctx)
   : Module("PrintStringIntoString", ctx, Source, "String", "SCIRun"),
     formatstring_(get_ctx()->subVar("formatstring"), "my string: %s")
 {
+}
+*/
+
+void PrintStringIntoString::setStateDefaults()
+{
+  //TODO
 }
 
 void
 PrintStringIntoString::execute()
 {
   std::string   format, output;
-  
+
   StringHandle currentstring;
-  int          inputport = 0;  
+  int          inputport = 0;
   std::string  str;
-  
+
   std::vector<char> buffer(256);
   bool    lastport = false;
-  
-  format = formatstring_.get();
 
-  StringHandle  stringH;
+#ifdef SCIRUN4_CODE_TO_BE_ENABLED_LATER
+  format = formatstring_.get();
+#endif
+
+  StringHandle stringH = getRequiredInput(Format);
+
+#ifdef SCIRUN4_CODE_TO_BE_ENABLED_LATER
   if (get_input_handle("Format", stringH, false))
   {
     format = stringH->get();
   }
+#endif
 
   // Get the dynamic handles
-  std::vector<StringHandle> stringsH;
-  get_dynamic_input_handles("Input",stringsH,false);
+  auto stringsH = getOptionalDynamicInputs(Input);
+//  get_dynamic_input_handles("Input",stringsH,false);
 
   size_t i = 0;
   while(i < format.size())
@@ -95,7 +130,7 @@ PrintStringIntoString::execute()
         error("Improper format string '%' is last character");
         return;
     }
-            
+
       if (format[i+1] == '%')
       {
           output += '%'; i += 2;
@@ -108,15 +143,15 @@ PrintStringIntoString::execute()
             &&(format[j] != 'i')&&(format[j] != 'E')&&(format[j] != 'x')&&(format[j] != 'X')&&(format[j] != 's')
             &&(format[j] != 'u')&&(format[j] != 'o')&&(format[j] != 'g')&&(format[j] != 'G')&&(format[j] != 'f')
             &&(format[j] != 'F')&&(format[j] != 'A')&&(format[j] != 'a')&&(format[j] != 's')&&(format[j] != 'C')&&(format[j] != 'p')&&(format[j] != 'P')) j++;
-    
+
         if (j == format.size())
         {
             error("Improper format string '%..type' clause was incomplete");
             return;
         }
-              
+
         std::string fstr = format.substr(i,j-i+1);
-        
+
         {
           str = "";
           if (lastport == false)
@@ -134,26 +169,26 @@ PrintStringIntoString::execute()
               else
               {
                 currentstring = stringsH[inputport]; inputport++;
-                if (currentstring.get_rep() != nullptr)
+                if (currentstring)
                 {
-                  str = currentstring->get();
+                  str = currentstring->value();
                 }
               }
             }
           }
         }
-        
+
         if ((format[j] == 's')||(format[j] == 'S')||(format[j] == 'c')||(format[j] == 'C'))
         {
           // We put the %s %S back in the string so it can be filled out lateron
           // By a different module
-          
+
           if (j == i+1)
           {
             output += str;
           }
           else
-          {   
+          {
             // there is some modifier or so
             // This implementation is naive in assuming only
             // a buffer of 256 bytes. This needs to be altered one
@@ -162,7 +197,7 @@ PrintStringIntoString::execute()
             output += std::string(static_cast<char *>(&(buffer[0])));
           }
           i = j+1;
-        
+
         }
         else if ((format[j] == 'd')||(format[j] == 'o')||(format[j] == 'i')||
                 (format[j] == 'u')||(format[j] == 'x')||(format[j] == 'X')||
@@ -203,9 +238,5 @@ PrintStringIntoString::execute()
   }
 
   StringHandle handle(new String(output));
-  send_output_handle("Output", handle);
+  sendOutput(Output, handle);
 }
-
-} // End namespace SCIRun
-
-
