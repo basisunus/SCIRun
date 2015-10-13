@@ -285,7 +285,7 @@ TEST(FactoryGeneratorTests, CanGenerateCodeFileFromMapWithFunction)
   auto path = TestResources::rootDir() / "Other" / "Factory" / "Config" / "Real";
   auto files = GetListOfModuleDescriptorFiles(path.string());
   auto map = BuildModuleDescriptorMap(files);
-  auto code = GenerateCodeFileFromMap(map);
+  auto code = GenerateModuleCodeFileFromMap(map);
 
   std::string expectedCode = "#include <Modules/Factory/ModuleDescriptionLookup.h>\n\n"
   "#include <Modules/Legacy/Fields/CreateLatVol.h>\n\n"
@@ -300,7 +300,7 @@ TEST(FactoryGeneratorTests, CanGenerateCodeFileFromMapWithFunction)
 
 TEST(FactoryGeneratorTests, FullProgram)
 {
-  auto code = GenerateCodeFileFromDescriptorPath((TestResources::rootDir() / "Other" / "Factory" / "Config" / "Real").string());
+  auto code = GenerateModuleCodeFileFromDescriptorPath((TestResources::rootDir() / "Other" / "Factory" / "Config" / "Real").string());
 
   std::string expectedCode = "#include <Modules/Factory/ModuleDescriptionLookup.h>\n\n"
   "#include <Modules/Legacy/Fields/CreateLatVol.h>\n\n"
@@ -311,4 +311,40 @@ TEST(FactoryGeneratorTests, FullProgram)
   "  addModuleDesc<CreateLatVol>(\"Ported module\", \"Creates Lattice Volumes\");\n"
   "}\n";
   EXPECT_EQ(expectedCode, code);
+}
+
+TEST(AlgorithmFactoryGeneratorTests, FullProgram)
+{
+  auto code = GenerateAlgorithmCodeFileFromDescriptorPath((TestResources::rootDir() / "Other" / "Factory" / "Config" / "Real").string());
+  std::string expectedCode = "#include <Core/Algorithms/Factory/HardCodedAlgorithmFactory.h>\n"
+  "#include <boost/functional/factory.hpp>\n\n"
+  "#include <Core/Algorithms/Legacy/Fields/CreateLatVolAlgo.h>\n\n"
+  "using namespace SCIRun::Core::Algorithms;\n"
+  "using namespace SCIRun::Core::Algorithms::Fields;\n\n"
+  "void HardCodedAlgorithmFactory::addToMakerMapGenerated()\n"
+  "{\n"
+  "  ADD_MODULE_ALGORITHM_GENERATED(CreateLatVol, CreateLatVolAlgo);\n"
+  "}\n";
+  EXPECT_EQ(expectedCode, code);
+}
+
+TEST(DialogFactoryGeneratorTests, FullProgram)
+{
+  auto code = GenerateDialogCodeFileFromDescriptorPath((TestResources::rootDir() / "Other" / "Factory" / "Config" / "Real").string());
+  std::string expectedCode =
+  "#include <Interface/Modules/Factory/ModuleDialogFactory.h>\n"
+  "#include <boost/assign.hpp>\n"
+  "#include <boost/functional/factory.hpp>\n\n"
+  "#include <Interface/Modules/Fields/CreateLatVolDialog.h>\n"
+  "\nusing namespace SCIRun::Gui;\n"
+  "using namespace boost::assign;\n\n"
+  "void ModuleDialogFactory::addDialogsToMakerMapGenerated()\n"
+  "{\n"
+  "  insert(dialogMakerMap_)\n"
+  "    ADD_MODULE_DIALOG(CreateLatVol, CreateLatVolDialog)\n"
+  "  ;\n}\n";
+
+  EXPECT_EQ(expectedCode, code);
+
+  //FAIL() << "todo";
 }

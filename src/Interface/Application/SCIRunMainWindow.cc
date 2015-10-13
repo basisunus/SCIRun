@@ -53,6 +53,7 @@
 #include <Interface/Application/DialogErrorControl.h>
 #include <Interface/Modules/Base/RemembersFileDialogDirectory.h>
 #include <Interface/Modules/Base/ModuleDialogGeneric.h> //TODO
+#include <Interface/Application/ModuleWizard/ModuleWizard.h>
 #include <Dataflow/Network/NetworkFwd.h>
 #include <Dataflow/Engine/Controller/NetworkEditorController.h> //DOH! see TODO in setController
 #include <Dataflow/Engine/Controller/ProvenanceManager.h>
@@ -66,6 +67,11 @@
 #include <Dataflow/Serialization/Network/NetworkDescriptionSerialization.h>
 
 #include <Core/Command/CommandFactory.h>
+
+#ifdef BUILD_WITH_PYTHON
+#include <Interface/Application/PythonConsoleWidget.h>
+#include <Core/Python/PythonInterpreter.h>
+#endif
 
 using namespace SCIRun;
 using namespace SCIRun::Gui;
@@ -215,6 +221,7 @@ SCIRunMainWindow::SCIRunMainWindow() : shortcuts_(0), firstTimePythonShown_(true
   connect(actionSave_As_, SIGNAL(triggered()), this, SLOT(saveNetworkAs()));
   connect(actionSave_, SIGNAL(triggered()), this, SLOT(saveNetwork()));
   connect(actionLoad_, SIGNAL(triggered()), this, SLOT(loadNetwork()));
+  connect(actionImportNetwork_, SIGNAL(triggered()), this, SLOT(importLegacyNetwork()));
   connect(actionQuit_, SIGNAL(triggered()), this, SLOT(close()));
   connect(actionRunScript_, SIGNAL(triggered()), this, SLOT(runScript()));
   connect(actionSelectAll_, SIGNAL(triggered()), networkEditor_, SLOT(selectAll()));
@@ -222,6 +229,8 @@ SCIRunMainWindow::SCIRunMainWindow() : shortcuts_(0), firstTimePythonShown_(true
   connect(actionDelete_, SIGNAL(triggered()), networkEditor_, SLOT(del()));
   actionDelete_->setShortcuts(QList<QKeySequence>() << QKeySequence::Delete << Qt::Key_Backspace);
 	connect(actionCleanUpNetwork_, SIGNAL(triggered()), networkEditor_, SLOT(cleanUpNetwork()));
+	connect(actionRunNewModuleWizard_, SIGNAL(triggered()), this, SLOT(runNewModuleWizard()));
+	actionRunNewModuleWizard_->setDisabled(true);
 
   connect(actionAbout_, SIGNAL(triggered()), this, SLOT(displayAcknowledgement()));
   connect(actionPinAllModuleUIs_, SIGNAL(triggered()), networkEditor_, SLOT(pinAllModuleUIs()));
@@ -587,7 +596,7 @@ bool SCIRunMainWindow::loadNetworkFile(const QString& filename)
       statusBar()->showMessage(tr("File loaded: ") + filename, 2000);
       networkProgressBar_->updateTotalModules(networkEditor_->numModules());
       provenanceWindow_->clear();
-      provenanceWindow_->showFile(command.openedFile_);
+      provenanceWindow_->showFile(command.file_);
 			networkEditor_->viewport()->update();
       return true;
     }
@@ -597,6 +606,35 @@ bool SCIRunMainWindow::loadNetworkFile(const QString& filename)
         exit(7);
       //TODO: set error code to non-0 so regression tests fail!
       // probably want to control this with a --regression flag.
+    }
+  }
+  return false;
+}
+
+void SCIRunMainWindow::importLegacyNetwork()
+{
+  if (okToContinue())
+  {
+    QString filename = QFileDialog::getOpenFileName(this, "Import Old Network...", latestNetworkDirectory_.path(), "*.srn");
+    importLegacyNetworkFile(filename);
+  }
+}
+
+bool SCIRunMainWindow::importLegacyNetworkFile(const QString& filename)
+{
+  if (!filename.isEmpty())
+  {
+    FileImportCommand command(filename.toStdString(), networkEditor_);
+    if (command.execute())
+    {
+      statusBar()->showMessage(tr("File imported: ") + filename, 2000);
+      networkProgressBar_->updateTotalModules(networkEditor_->numModules());
+      networkEditor_->viewport()->update();
+      return true;
+    }
+    else
+    {
+      statusBar()->showMessage(tr("File import failed: ") + filename, 2000);
     }
   }
   return false;
@@ -1336,10 +1374,10 @@ void SCIRunMainWindow::resetWindowLayout()
 
 void SCIRunMainWindow::hideNonfunctioningWidgets()
 {
+	//TODO: make issues to implement these, as I don't want to forget they are there.
   QList<QAction*> nonfunctioningActions;
   nonfunctioningActions <<
-    actionInsert_ <<
-    actionCreate_Module_Skeleton_;
+    actionInsert_;
   QList<QMenu*> nonfunctioningMenus;
   nonfunctioningMenus <<
     menuSubnets_;
@@ -1580,6 +1618,13 @@ void SCIRunMainWindow::showKeyboardShortcutsDialog()
     shortcuts_ = new ShortcutsInterface(this);
   }
   shortcuts_->show();
+}
+
+void SCIRunMainWindow::runNewModuleWizard()
+{
+	qDebug() << "new module wizard coming soon";
+	ClassWizard* wizard = new ClassWizard(this);
+	wizard->show();
 }
 
 FileDownloader::FileDownloader(QUrl imageUrl, QStatusBar* statusBar, QObject *parent) : QObject(parent), reply_(0), statusBar_(statusBar)

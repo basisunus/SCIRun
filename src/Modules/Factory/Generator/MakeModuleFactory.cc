@@ -34,32 +34,9 @@ DEALINGS IN THE SOFTWARE.
 #include <Modules/Factory/Generator/ModuleFactoryGenerator.h>
 #include <fstream>
 
-int SCIRun::Modules::Factory::MakeSquareRootTableForTesting(const std::string& filename)
-{
-  // open the output file
-  FILE *fout = fopen(filename.c_str(), "w");
-  if (!fout)
-  {
-    return 1;
-  }
-
-  // create a source file with a table of square roots
-  fprintf(fout, "double sqrtTable[] = {\n");
-  for (int i = 0; i < 26; ++i)
-  {
-    double result = sqrt(static_cast<double>(i));
-    fprintf(fout, "%g,\n", result);
-  }
-
-  // close the table with a zero
-  fprintf(fout, "0};\n");
-  fclose(fout);
-  return 0;
-}
-
 int SCIRun::Modules::Factory::MakeGeneratedModuleFactoryCode(const std::string& sourcePath, const std::string& generatedFilename)
 {
-  auto code = SCIRun::Modules::Factory::Generator::GenerateCodeFileFromSourcePath(sourcePath);
+  auto code = SCIRun::Modules::Factory::Generator::GenerateModuleCodeFileFromSourcePath(sourcePath);
   std::ofstream out(generatedFilename);
   out << code;
   return 0;
